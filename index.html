@@ -1,0 +1,126 @@
+/* ---------- PIANO ROLL GAME ---------- */
+#screen-game { flex-direction: column; padding: 0; background: #000; }
+.hud { width: 100%; max-width: 420px; margin: 0 auto; padding: 14px 18px 8px; display: flex; flex-direction: column; gap: 8px; z-index: 14; }
+.hud-row { display: flex; align-items: flex-start; justify-content: space-between; }
+.hud-stat { font-size: 11px; letter-spacing: .22em; color: var(--gold); text-transform: uppercase; }
+.hud-stat b { display: block; font-size: 23px; letter-spacing: .04em; color: var(--gold-bright); font-weight: 600; margin-top: 1px; }
+.hud-stat.right { text-align: right; }
+.combo-wrap { text-align: center; min-width: 90px; }
+.combo-num { font-size: 46px; font-weight: 700; line-height: 1; color: var(--gold-bright); text-shadow: 0 0 22px rgba(246,220,160,.55); font-style: italic; opacity: 0; transition: opacity .2s; }
+.combo-num.show { opacity: 1; }
+.combo-num.pop { animation: cpop .28s ease; }
+@keyframes cpop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.combo-lbl { font-size: 9px; letter-spacing: .3em; color: var(--gold); text-transform: uppercase; }
+.pbar { height: 5px; width: 100%; background: rgba(227,183,101,.16); border-radius: 3px; overflow: hidden; position: relative; }
+.pbar-fill { height: 100%; width: 0%; border-radius: 3px; background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright)); box-shadow: 0 0 12px rgba(246,220,160,.7); transition: width .1s linear; }
+
+/* 🎹 PERBAIKAN AREA GAME & LANES (Biar notes tidak keluar jalur) */
+#playbox {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 420px; /* Mengunci lebar area gameplay */
+  margin: 0 auto; /* Menengahkan gameplay di layar besar */
+  overflow: hidden;
+  touch-action: none;
+  cursor: pointer;
+  background: #111; /* Background gelap ala Magic Tiles */
+  border-left: 1px solid rgba(255,255,255,0.1);
+  border-right: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.lanes-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.lane {
+  flex: 1;
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.08); /* Garis pemisah antar tuts */
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,.02) 100%);
+  transition: background 0.1s;
+}
+.lane:last-child { border-right: none; }
+.lane.active { background: rgba(255, 255, 255, 0.15); } /* Efek flash putih saat ditekan */
+
+/* 🎹 TUTS BAWAH (Tempat menekan) */
+.lane::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%; 
+  background: linear-gradient(to bottom, #f9f9f9, #d0d0d0);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-top: 4px solid #000;
+  z-index: 10;
+  transform-origin: bottom;
+  transition: transform 0.05s, filter 0.05s;
+}
+
+.lane.active::after {
+  transform: scaleY(0.92);
+  filter: brightness(0.7);
+}
+
+.lane-key {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  color: #222; 
+  font-weight: 800;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.hit-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18%; 
+  height: 3px;
+  background: #00f2fe; /* Garis batas timing */
+  box-shadow: 0 0 15px #00f2fe;
+  z-index: 12;
+  pointer-events: none;
+}
+.hit-zone { display: none; }
+
+/* 🎵 BENTUK TILES ALA MAGIC TILES (Balok Vertikal & Terkunci di Jalur) */
+.fnote {
+  position: absolute;
+  width: 25%; /* Memaksa lebar tile agar PAS dengan 1 lane (karena ada 4 lane) */
+  min-height: 140px; /* Bentuk balok panjang. Jika JS mu mendukung 'hold', ini akan memanjang sendiri */
+  border-radius: 4px;
+  z-index: 8;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 2px solid rgba(0,0,0,0.8); /* Outline gelap agar tegas */
+  box-shadow: inset 0 0 15px rgba(255,255,255,0.3), 0 4px 10px rgba(0,0,0,0.5); /* Efek glossy & shadow */
+}
+
+/* Warna Block (Gradasi Solid khas Rhythm Game) */
+.fnote.l0 { background: linear-gradient(180deg, #5ec2eb, #278fbf); } 
+.fnote.l1 { background: linear-gradient(180deg, #ff8da1, #e0455f); } 
+.fnote.l2 { background: linear-gradient(180deg, #6ee296, #2ab558); } 
+.fnote.l3 { background: linear-gradient(180deg, #fcd05b, #e6ad15); } 
+
+.fnote.hit { animation: fnHit .2s ease-out forwards; }
+.fnote.miss { animation: fnMiss .3s ease-out forwards; }
+@keyframes fnHit { to { transform: scale(1.05); opacity: 0; filter: brightness(2); } }
+@keyframes fnMiss { to { transform: translateY(20px); opacity: 0; filter: grayscale(1) brightness(0.3); } }
+
+.judge { position: absolute; transform: translate(-50%,-50%); z-index: 20; font-style: italic; font-weight: 800; font-size: 26px; pointer-events: none; animation: judgeFloat .6s ease-out forwards; text-shadow: 0 4px 10px rgba(0,0,0,.9); }
+@keyframes judgeFloat { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.6); } 20% { opacity: 1; transform: translate(-50%,-70%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%,-130%) scale(1); } }
+.spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; z-index: 18; background: #fff; box-shadow: 0 0 8px #00f2fe; pointer-events: none; }
+.ripple { position: absolute; border-radius: 50%; border: 3px solid rgba(0, 242, 254, 0.8); transform: translate(-50%,-50%); pointer-events: none; z-index: 16; animation: rip .35s ease-out forwards; }
+@keyframes rip { 0% { width: 10px; height: 10px; opacity: 1; } 100% { width: 120px; height: 120px; opacity: 0; } }
