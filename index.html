@@ -1,126 +1,1023 @@
-/* ---------- PIANO ROLL GAME ---------- */
-#screen-game { flex-direction: column; padding: 0; background: #000; }
-.hud { width: 100%; max-width: 420px; margin: 0 auto; padding: 14px 18px 8px; display: flex; flex-direction: column; gap: 8px; z-index: 14; }
-.hud-row { display: flex; align-items: flex-start; justify-content: space-between; }
-.hud-stat { font-size: 11px; letter-spacing: .22em; color: var(--gold); text-transform: uppercase; }
-.hud-stat b { display: block; font-size: 23px; letter-spacing: .04em; color: var(--gold-bright); font-weight: 600; margin-top: 1px; }
-.hud-stat.right { text-align: right; }
-.combo-wrap { text-align: center; min-width: 90px; }
-.combo-num { font-size: 46px; font-weight: 700; line-height: 1; color: var(--gold-bright); text-shadow: 0 0 22px rgba(246,220,160,.55); font-style: italic; opacity: 0; transition: opacity .2s; }
-.combo-num.show { opacity: 1; }
-.combo-num.pop { animation: cpop .28s ease; }
-@keyframes cpop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
-.combo-lbl { font-size: 9px; letter-spacing: .3em; color: var(--gold); text-transform: uppercase; }
-.pbar { height: 5px; width: 100%; background: rgba(227,183,101,.16); border-radius: 3px; overflow: hidden; position: relative; }
-.pbar-fill { height: 100%; width: 0%; border-radius: 3px; background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright)); box-shadow: 0 0 12px rgba(246,220,160,.7); transition: width .1s linear; }
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Futsal Shootout — Persib vs Persija</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --persib:#1e63d8;
+    --persib-dark:#123c87;
+    --persija:#ef5a16;
+    --persija-dark:#a8390c;
+    --court:#28a85a;
+    --ink:#16223a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Fredoka',sans-serif;
+    background:
+      radial-gradient(900px 500px at 50% -10%, #2a4a8f 0%, transparent 70%),
+      linear-gradient(180deg,#0e1830 0%,#1a2950 55%,#0c1426 100%);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100%;
+    padding:14px;
+    overflow-x:hidden;
+  }
+  .game{
+    width:100%;
+    max-width:780px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
 
-/* 🎹 PERBAIKAN AREA GAME & LANES (Biar notes tidak keluar jalur) */
-#playbox {
-  position: relative;
-  flex: 1;
-  width: 100%;
-  max-width: 420px; /* Mengunci lebar area gameplay */
-  margin: 0 auto; /* Menengahkan gameplay di layar besar */
-  overflow: hidden;
-  touch-action: none;
-  cursor: pointer;
-  background: #111; /* Background gelap ala Magic Tiles */
-  border-left: 1px solid rgba(255,255,255,0.1);
-  border-right: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 0 50px rgba(0,0,0,0.8);
-}
+  /* ---- Scoreboard ---- */
+  .scoreboard{
+    display:flex;
+    align-items:stretch;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    border:2px solid rgba(255,255,255,.12);
+  }
+  .team{
+    flex:1;
+    padding:9px 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  .team.persib{background:linear-gradient(135deg,var(--persib),var(--persib-dark));}
+  .team.persija{background:linear-gradient(135deg,var(--persija),var(--persija-dark));}
+  .team .name{font-weight:700;font-size:13px;letter-spacing:.5px;text-shadow:0 2px 4px rgba(0,0,0,.35);}
+  .team .role{font-size:9.5px;opacity:.8;letter-spacing:1px;text-transform:uppercase;}
+  .score-mid{
+    background:#0c1322;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:6px 16px;
+    min-width:120px;
+  }
+  .score-num{font-family:'Bungee',sans-serif;font-size:30px;line-height:1;color:#ffd84d;text-shadow:0 3px 0 rgba(0,0,0,.4);}
+  .score-label{font-size:9px;letter-spacing:2px;opacity:.65;margin-top:3px;}
 
-.lanes-wrap {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-}
+  /* ---- Shots indicator ---- */
+  .shots{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:#0c1322;
+    border-radius:12px;
+    padding:7px 12px;
+    border:2px solid rgba(255,255,255,.1);
+  }
+  .shots .lbl{font-size:11px;letter-spacing:1.5px;opacity:.65;margin-right:4px;}
+  .dot{
+    width:16px;height:16px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,#cfd6e2);
+    border:2px solid #20283c;
+    transition:transform .25s, opacity .25s;
+  }
+  .dot.goal{background:radial-gradient(circle at 35% 30%,#9bff9b,#27a527);box-shadow:0 0 8px #4ade80;}
+  .dot.miss{background:#3a4258;opacity:.5;}
+  .dot.active{transform:scale(1.25);box-shadow:0 0 10px #ffd84d;}
 
-.lane {
-  flex: 1;
-  position: relative;
-  border-right: 1px solid rgba(255, 255, 255, 0.08); /* Garis pemisah antar tuts */
-  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,.02) 100%);
-  transition: background 0.1s;
-}
-.lane:last-child { border-right: none; }
-.lane.active { background: rgba(255, 255, 255, 0.15); } /* Efek flash putih saat ditekan */
+  /* ---- Stage ---- */
+  .stage{
+    position:relative;
+    width:100%;
+    aspect-ratio:960/600;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 16px 40px rgba(0,0,0,.55);
+    border:3px solid rgba(255,255,255,.1);
+  }
+  canvas{display:block;width:100%;height:100%;touch-action:none;}
 
-/* 🎹 TUTS BAWAH (Tempat menekan) */
-.lane::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 18%; 
-  background: linear-gradient(to bottom, #f9f9f9, #d0d0d0);
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  border-top: 4px solid #000;
-  z-index: 10;
-  transform-origin: bottom;
-  transition: transform 0.05s, filter 0.05s;
-}
+  /* ---- Overlays ---- */
+  .overlay{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    text-align:center;gap:14px;
+    padding:24px;
+    background:rgba(8,14,28,.82);
+    backdrop-filter:blur(3px);
+  }
+  .overlay.hidden{display:none;}
+  .ttl{
+    font-family:'Bungee',sans-serif;
+    font-size:clamp(26px,7vw,46px);
+    line-height:1.05;
+    text-transform:uppercase;
+  }
+  .ttl .b{color:#5b9bff;}
+  .ttl .o{color:#ff8a3d;}
+  .sub{font-size:clamp(12px,3vw,15px);max-width:380px;opacity:.85;line-height:1.5;}
+  .vs-row{
+    display:flex;align-items:center;gap:14px;
+    font-family:'Bungee',sans-serif;font-size:15px;
+  }
+  .badge{
+    padding:7px 14px;border-radius:30px;font-size:13px;
+    box-shadow:0 6px 16px rgba(0,0,0,.4);
+  }
+  .badge.b{background:linear-gradient(135deg,var(--persib),var(--persib-dark));}
+  .badge.o{background:linear-gradient(135deg,var(--persija),var(--persija-dark));}
+  .vs-x{font-size:13px;opacity:.7;}
+  .btn{
+    font-family:'Bungee',sans-serif;
+    font-size:clamp(15px,4vw,20px);
+    padding:13px 34px;
+    border:none;border-radius:40px;
+    background:linear-gradient(135deg,#ffd84d,#ff9d2e);
+    color:#3a2400;
+    cursor:pointer;
+    box-shadow:0 8px 0 #b06a00, 0 12px 22px rgba(0,0,0,.4);
+    transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active{transform:translateY(5px);box-shadow:0 3px 0 #b06a00,0 6px 12px rgba(0,0,0,.4);}
+  .end-title{font-family:'Bungee',sans-serif;font-size:clamp(28px,8vw,52px);}
+  .end-title.win{color:#5bff8f;text-shadow:0 0 24px rgba(91,255,143,.5);}
+  .end-title.lose{color:#ff6b6b;text-shadow:0 0 24px rgba(255,107,107,.45);}
+  .end-score{font-size:clamp(14px,3.6vw,18px);opacity:.9;}
 
-.lane.active::after {
-  transform: scaleY(0.92);
-  filter: brightness(0.7);
-}
+  .hint{
+    text-align:center;font-size:12px;opacity:.6;letter-spacing:.4px;
+  }
 
-.lane-key {
-  position: absolute;
-  bottom: 6%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 14px;
-  color: #222; 
-  font-weight: 800;
-  pointer-events: none;
-  z-index: 15;
-}
+  /* ---- Toast ---- */
+  .toast{
+    position:absolute;
+    left:50%;top:30%;
+    transform:translate(-50%,-50%) scale(.4);
+    font-family:'Bungee',sans-serif;
+    font-size:clamp(30px,9vw,58px);
+    text-transform:uppercase;
+    pointer-events:none;
+    opacity:0;
+    text-shadow:0 5px 0 rgba(0,0,0,.35);
+    white-space:nowrap;
+  }
+  .toast.show{animation:pop 1.25s ease-out forwards;}
+  @keyframes pop{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-8deg);}
+    18%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(3deg);}
+    32%{transform:translate(-50%,-50%) scale(.98) rotate(-1deg);}
+    45%{transform:translate(-50%,-50%) scale(1.03);}
+    80%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0;transform:translate(-50%,-58%) scale(1);}
+  }
 
-.hit-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 18%; 
-  height: 3px;
-  background: #00f2fe; /* Garis batas timing */
-  box-shadow: 0 0 15px #00f2fe;
-  z-index: 12;
-  pointer-events: none;
-}
-.hit-zone { display: none; }
+  /* ---- NEW: Info & Letter screens ---- */
+  .btn-blue {
+    background: linear-gradient(135deg,#5b9bff,#1e63d8) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 0 #123c87, 0 12px 22px rgba(0,0,0,.4) !important;
+  }
+  .btn-blue:active {
+    box-shadow: 0 3px 0 #123c87, 0 6px 12px rgba(0,0,0,.4) !important;
+    transform: translateY(5px);
+  }
 
-/* 🎵 BENTUK TILES ALA MAGIC TILES (Balok Vertikal & Terkunci di Jalur) */
-.fnote {
-  position: absolute;
-  width: 25%; /* Memaksa lebar tile agar PAS dengan 1 lane (karena ada 4 lane) */
-  min-height: 140px; /* Bentuk balok panjang. Jika JS mu mendukung 'hold', ini akan memanjang sendiri */
-  border-radius: 4px;
-  z-index: 8;
-  pointer-events: none;
-  box-sizing: border-box;
-  border: 2px solid rgba(0,0,0,0.8); /* Outline gelap agar tegas */
-  box-shadow: inset 0 0 15px rgba(255,255,255,0.3), 0 4px 10px rgba(0,0,0,0.5); /* Efek glossy & shadow */
-}
+  .envelope {
+    font-size: 80px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,.4));
+    animation: float 3s ease-in-out infinite;
+    line-height: 1;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
 
-/* Warna Block (Gradasi Solid khas Rhythm Game) */
-.fnote.l0 { background: linear-gradient(180deg, #5ec2eb, #278fbf); } 
-.fnote.l1 { background: linear-gradient(180deg, #ff8da1, #e0455f); } 
-.fnote.l2 { background: linear-gradient(180deg, #6ee296, #2ab558); } 
-.fnote.l3 { background: linear-gradient(180deg, #fcd05b, #e6ad15); } 
+  .letter-paper {
+    background: #fffef8;
+    color: #2a2a2a;
+    padding: 32px;
+    border-radius: 14px;
+    max-width: 540px;
+    width: 92%;
+    text-align: left;
+    box-shadow: 0 24px 70px rgba(0,0,0,.45);
+    max-height: 68vh;
+    overflow-y: auto;
+    position: relative;
+    animation: paperIn .5s ease-out;
+  }
+  .letter-paper::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--persib), var(--persija));
+    border-radius: 14px 14px 0 0;
+  }
+  .letter-paper h3 {
+    font-family: 'Bungee', sans-serif;
+    color: var(--persib-dark);
+    text-align: center;
+    margin: 10px 0 20px;
+    font-size: 22px;
+  }
+  .letter-paper .to {
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 18px;
+    font-size: 15px;
+  }
+  .letter-paper p {
+    font-size: 15.5px;
+    line-height: 1.75;
+    margin-bottom: 14px;
+    color: #333;
+  }
+  .letter-paper .signature {
+    text-align: right;
+    margin-top: 28px;
+    font-style: italic;
+    color: #555;
+    font-size: 15px;
+  }
+  .letter-paper .sign-name {
+    font-weight: 700;
+    color: #222;
+    font-style: normal;
+    margin-top: 6px;
+  }
+  @keyframes paperIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+</style>
+</head>
+<body>
+<div class="game">
 
-.fnote.hit { animation: fnHit .2s ease-out forwards; }
-.fnote.miss { animation: fnMiss .3s ease-out forwards; }
-@keyframes fnHit { to { transform: scale(1.05); opacity: 0; filter: brightness(2); } }
-@keyframes fnMiss { to { transform: translateY(20px); opacity: 0; filter: grayscale(1) brightness(0.3); } }
+  <div class="scoreboard">
+    <div class="team persib">
+      <div class="name">PERSIB BANDUNG</div>
+      <div class="role">Penyerang</div>
+    </div>
+    <div class="score-mid">
+      <div class="score-num"><span id="scoreP">0</span></div>
+      <div class="score-label">GOL TERCIPTA</div>
+    </div>
+    <div class="team persija">
+      <div class="name">PERSIJA JAKARTA</div>
+      <div class="role">Bertahan</div>
+    </div>
+  </div>
 
-.judge { position: absolute; transform: translate(-50%,-50%); z-index: 20; font-style: italic; font-weight: 800; font-size: 26px; pointer-events: none; animation: judgeFloat .6s ease-out forwards; text-shadow: 0 4px 10px rgba(0,0,0,.9); }
-@keyframes judgeFloat { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.6); } 20% { opacity: 1; transform: translate(-50%,-70%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%,-130%) scale(1); } }
-.spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; z-index: 18; background: #fff; box-shadow: 0 0 8px #00f2fe; pointer-events: none; }
-.ripple { position: absolute; border-radius: 50%; border: 3px solid rgba(0, 242, 254, 0.8); transform: translate(-50%,-50%); pointer-events: none; z-index: 16; animation: rip .35s ease-out forwards; }
-@keyframes rip { 0% { width: 10px; height: 10px; opacity: 1; } 100% { width: 120px; height: 120px; opacity: 0; } }
+  <div class="shots">
+    <span class="lbl">TEMBAKAN</span>
+    <div class="dot" data-i="0"></div>
+    <div class="dot" data-i="1"></div>
+    <div class="dot" data-i="2"></div>
+    <div class="dot" data-i="3"></div>
+    <div class="dot" data-i="4"></div>
+  </div>
+
+  <div class="stage">
+    <canvas id="cv" width="960" height="600"></canvas>
+    <div class="toast" id="toast"></div>
+
+    <!-- Info / Gimmick screen (NEW) -->
+    <div class="overlay" id="infoScreen">
+      <div class="ttl">PESAN RAHASIA</div>
+      <div class="sub">
+        Menangkan <b>3 gol</b> untuk Persib melawan Persija agar bisa mendapatkan pesan rahasia!
+        <br><br>
+        <span style="opacity:.7">(ini gimmick)</span>
+      </div>
+      <button class="btn" id="infoBtn">MENGERTI, LANJUT!</button>
+    </div>
+
+    <!-- Start screen -->
+    <div class="overlay hidden" id="startScreen">
+      <div class="ttl">FUTSAL<br><span class="b">SHOOT</span><span class="o">OUT</span></div>
+      <div class="vs-row">
+        <span class="badge b">PERSIB</span>
+        <span class="vs-x">VS</span>
+        <span class="badge o">PERSIJA</span>
+      </div>
+      <div class="sub">
+        Tarik bola ke belakang lalu lepas — persis seperti Angry Birds!
+        Kiper Persija gerak naik-turun otomatis. Cari celahnya.<br><br>
+        <b>5 tembakan</b> • cetak <b>3 gol atau lebih</b> untuk menang.
+      </div>
+      <button class="btn" id="startBtn">MAIN!</button>
+    </div>
+
+    <!-- End screen -->
+    <div class="overlay hidden" id="endScreen">
+      <div class="end-title" id="endTitle">PERSIB MENANG!</div>
+      <div class="end-score" id="endScore"></div>
+      <button class="btn" id="letterBtn" style="display:none; margin-bottom:12px;">📩 BUKA SURAT</button>
+      <button class="btn" id="restartBtn">MAIN LAGI</button>
+    </div>
+
+    <!-- Letter closed screen (NEW) -->
+    <div class="overlay hidden" id="letterScreen">
+      <div class="envelope">📩</div>
+      <div class="sub">Sebuah surat rahasia telah terbuka untukmu...</div>
+      <button class="btn" id="openLetterBtn">KLIK</button>
+    </div>
+
+    <!-- Letter open screen (NEW) -->
+    <div class="overlay hidden" id="letterOpenScreen">
+      <div class="letter-paper">
+        <h3>Surat Ucapan Terima Kasih</h3>
+        <div class="to">Kepada Manajer,</div>
+        <p>Halo,</p>
+        <p>Saya ingin mengucapkan terima kasih yang tulus atas segala <b>bimbingan, kepercayaan, dan kesabaran</b> yang telah diberikan selama ini. Bekerja bersama Anda adalah pengalaman yang sangat berarti dan banyak mengajarkan saya tentang profesionalisme, kepemimpinan, serta nilai-nilai kerja sama tim.</p>
+        <p>Seiring dengan <b>reposisi saya ke departemen lain</b>, saya merasa perlu menyampaikan apresiasi ini secara langsung. Dukungan Anda telah menjadi fondasi yang kuat bagi perkembangan karier saya.</p>
+        <p>Saya berharap hubungan baik kita tetap terjalin, dan saya selalu terbuka untuk berkolaborasi kapan pun diperlukan. Semoga Anda dan tim terus sukses dan mencapai segala target yang telah ditetapkan.</p>
+        <p>Terima kasih sekali lagi atas segalanya.</p>
+        <div class="signature">
+          Hormat saya,
+          <div class="sign-name">Asisten Manajer</div>
+        </div>
+      </div>
+      <button class="btn btn-blue" id="closeLetterBtn" style="margin-top:18px;">TUTUP SURAT</button>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">Tahan & tarik bola untuk membidik, lepas untuk menembak.</div>
+</div>
+
+<script>
+(() => {
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  // ---- Layout constants ----
+  const GROUND = 505;
+  const ANCHOR = { x: 198, y: 416 };
+  const BALL_R = 17;
+  const GOAL_X = 832;
+  const GOAL_TOP = 250;
+  const GOAL_BOTTOM = GROUND;
+  const KEEPER_W = 52, KEEPER_H = 96;
+  const KEEPER_X = 806;
+  const KEEPER_MIN = GOAL_TOP + 16;
+  const KEEPER_MAX = GOAL_BOTTOM - KEEPER_H - 6;
+  const MAX_DRAG = 205;
+  const POWER = 0.158;
+  const GRAVITY = 0.40;
+  const MAX_SPEED = 34;
+
+  // ---- Game state ----
+  let phase = 'start';
+  let shotsUsed = 0, goals = 0;
+  let resultLocked = null;
+  let resultTimer = 0;
+  let dragging = false;
+  let pointer = { x: ANCHOR.x, y: ANCHOR.y };
+  let frame = 0;
+  let confetti = [];
+  let flash = 0;
+
+  const ball = { x: ANCHOR.x, y: ANCHOR.y, vx: 0, vy: 0, spin: 0, ang: 0 };
+  const keeper = { y: (KEEPER_MIN + KEEPER_MAX) / 2, vy: 2.6, lunge: 0 };
+
+  // ---- DOM ----
+  const infoScreen = document.getElementById('infoScreen');
+  const infoBtn = document.getElementById('infoBtn');
+  const startScreen = document.getElementById('startScreen');
+  const endScreen = document.getElementById('endScreen');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const letterBtn = document.getElementById('letterBtn');
+  const letterScreen = document.getElementById('letterScreen');
+  const openLetterBtn = document.getElementById('openLetterBtn');
+  const letterOpenScreen = document.getElementById('letterOpenScreen');
+  const closeLetterBtn = document.getElementById('closeLetterBtn');
+  const toastEl = document.getElementById('toast');
+  const scorePEl = document.getElementById('scoreP');
+  const dots = [...document.querySelectorAll('.dot')];
+  const endTitle = document.getElementById('endTitle');
+  const endScore = document.getElementById('endScore');
+  const hintEl = document.getElementById('hint');
+
+  // ---- Audio (tiny WebAudio blips) ----
+  let actx = null;
+  function audioInit(){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  function beep(freq, dur, type='square', vol=0.18, slide=0){
+    if(!actx) return;
+    try{
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = freq;
+      if(slide) o.frequency.linearRampToValueAtTime(freq+slide, actx.currentTime+dur);
+      g.gain.value = vol;
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime+dur);
+    }catch(e){}
+  }
+  function sndKick(){ beep(150, 0.12, 'square', 0.22, -60); }
+  function sndGoal(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.22,'triangle',0.2),i*90)); }
+  function sndSave(){ beep(90,0.18,'sawtooth',0.22); }
+  function sndMiss(){ beep(200,0.25,'sine',0.14,-110); }
+
+  // ---- Crowd (generated once) ----
+  const crowd = [];
+  const crowdColors = ['#e8504a','#3f7fe0','#f3b73c','#48b96a','#ffffff','#e87fc0','#7a5be0','#ff8a3d'];
+  for(let row=0; row<<3; row++){
+    for(let i=0; i<<46; i++){
+      crowd.push({
+        x: 14 + i*21 + (row%2)*10,
+        y: 132 + row*30,
+        c: crowdColors[(Math.random()*crowdColors.length)|0],
+        bob: Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  // ===================== INPUT =====================
+  function stagePos(e){
+    const r = cv.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+    return { x:(cx-r.left)*(W/r.width), y:(cy-r.top)*(H/r.height) };
+  }
+  function onDown(e){
+    if(phase !== 'aiming') return;
+    const p = stagePos(e);
+    const d = Math.hypot(p.x-ANCHOR.x, p.y-ANCHOR.y);
+    if(d < 90){
+      dragging = true;
+      pointer = p;
+      e.preventDefault();
+    }
+  }
+  function onMove(e){
+    if(!dragging) return;
+    let p = stagePos(e);
+    let dx = p.x-ANCHOR.x, dy = p.y-ANCHOR.y;
+    const d = Math.hypot(dx,dy);
+    if(d > MAX_DRAG){ dx = dx/d*MAX_DRAG; dy = dy/d*MAX_DRAG; }
+    pointer = { x: ANCHOR.x+dx, y: ANCHOR.y+dy };
+    ball.x = pointer.x; ball.y = pointer.y;
+    e.preventDefault();
+  }
+  function onUp(e){
+    if(!dragging) return;
+    dragging = false;
+    let vx = (ANCHOR.x - pointer.x) * POWER;
+    let vy = (ANCHOR.y - pointer.y) * POWER;
+    const sp = Math.hypot(vx,vy);
+    if(sp < 3){
+      ball.x = ANCHOR.x; ball.y = ANCHOR.y;
+      return;
+    }
+    if(sp > MAX_SPEED){ vx = vx/sp*MAX_SPEED; vy = vy/sp*MAX_SPEED; }
+    ball.vx = vx; ball.vy = vy;
+    ball.spin = vx*0.045;
+    phase = 'flying';
+    shotsUsed++;
+    resultLocked = null;
+    updateDots();
+    sndKick();
+    hintEl.textContent = 'Tembakan melaju...';
+  }
+  cv.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  cv.addEventListener('touchstart', onDown, {passive:false});
+  window.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onUp);
+
+  // ===================== GAME FLOW =====================
+  function startGame(){
+    audioInit();
+    if(actx && actx.state==='suspended') actx.resume();
+    shotsUsed = 0; goals = 0;
+    resultLocked = null; confetti = [];
+    scorePEl.textContent = '0';
+    dots.forEach(d=>{ d.className='dot'; });
+    infoScreen.classList.add('hidden');
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    letterScreen.classList.add('hidden');
+    letterOpenScreen.classList.add('hidden');
+    resetBall();
+    phase = 'aiming';
+    hintEl.textContent = 'Tahan & tarik bola untuk membidik, lepas untuk menembak.';
+    updateDots();
+  }
+  function resetBall(){
+    ball.x = ANCHOR.x; ball.y = ANCHOR.y;
+    ball.vx = 0; ball.vy = 0; ball.spin = 0; ball.ang = 0;
+  }
+  function updateDots(){
+    dots.forEach((d,i)=>{
+      d.classList.remove('active');
+      if(i < shotsUsed) return;
+      if(i === shotsUsed && phase!=='over') d.classList.add('active');
+    });
+  }
+  function showToast(text, color){
+    toastEl.textContent = text;
+    toastEl.style.color = color;
+    toastEl.classList.remove('show');
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
+  }
+  function resolveShot(kind){
+    if(resultLocked) return;
+    resultLocked = kind;
+    phase = 'result';
+    resultTimer = 80;
+    const idx = shotsUsed-1;
+    if(kind==='goal'){
+      goals++;
+      scorePEl.textContent = goals;
+      dots[idx].className = 'dot goal';
+      showToast('GOOOL! ⚽', '#5bff8f');
+      spawnConfetti();
+      flash = 14;
+      sndGoal();
+      keeper.lunge = 0;
+    } else {
+      dots[idx].className = 'dot miss';
+      if(kind==='save'){ showToast('DITEPIS KIPER!', '#ff8a3d'); sndSave(); }
+      else if(kind==='post'){ showToast('KENA MISTAR!', '#ffd84d'); sndMiss(); }
+      else if(kind==='over'){ showToast('MELAMBUNG!', '#9fb4d8'); sndMiss(); }
+      else { showToast('MELESET!', '#9fb4d8'); sndMiss(); }
+    }
+  }
+  function nextStep(){
+    if(shotsUsed >= 5){
+      phase = 'over';
+      const win = goals >= 3;
+      endTitle.textContent = win ? 'PERSIB MENANG!' : 'PERSIB KALAH...';
+      endTitle.className = 'end-title ' + (win ? 'win' : 'lose');
+
+      if(win){
+        endScore.innerHTML = `${goals} gol dari 5 tembakan — Maung Bandung mengaum! 🦁<<br><br><span style="color:#ffd84d">Kamu mendapatkan surat rahasia! 📩</span>`;
+        letterBtn.style.display = 'inline-block';
+        restartBtn.textContent = 'MAIN LAGI';
+        restartBtn.classList.add('btn-blue');
+        sndGoal();
+      } else {
+        endScore.textContent = `Hanya ${goals} gol dari 5 tembakan. Butuh ${3-goals} gol lagi.`;
+        letterBtn.style.display = 'none';
+        restartBtn.textContent = 'COBA LAGI';
+        restartBtn.classList.remove('btn-blue');
+      }
+
+      endScreen.classList.remove('hidden');
+      hintEl.textContent = 'Game selesai.';
+    } else {
+      resetBall();
+      phase = 'aiming';
+      hintEl.textContent = 'Tahan & tarik bola untuk membidik, lepas untuk menembak.';
+      updateDots();
+    }
+  }
+
+  function spawnConfetti(){
+    const cols = ['#1e63d8','#ffffff','#ffd84d','#5bff8f','#ff8a3d','#5b9bff'];
+    for(let i=0;i<<46;i++){
+      confetti.push({
+        x: GOAL_X-30+Math.random()*120,
+        y: GOAL_TOP+30+Math.random()*120,
+        vx:(Math.random()-0.5)*7,
+        vy:-Math.random()*9-2,
+        c: cols[(Math.random()*cols.length)|0],
+        r: 3+Math.random()*5,
+        rot: Math.random()*6,
+        vr:(Math.random()-0.5)*0.4,
+        life: 70+Math.random()*40
+      });
+    }
+  }
+
+  // ===================== UPDATE =====================
+  function circleHitsKeeper(){
+    const kx = KEEPER_X, ky = keeper.y, kw = KEEPER_W, kh = KEEPER_H;
+    const nx = Math.max(kx, Math.min(ball.x, kx+kw));
+    const ny = Math.max(ky, Math.min(ball.y, ky+kh));
+    return Math.hypot(ball.x-nx, ball.y-ny) < BALL_R;
+  }
+
+  function update(){
+    frame++;
+
+    if(phase !== 'over'){
+      const spd = 2.5 + shotsUsed*0.22;
+      keeper.y += keeper.vy>0 ? spd : -spd;
+      if(keeper.y <= KEEPER_MIN){ keeper.y = KEEPER_MIN; keeper.vy = 1; }
+      if(keeper.y >= KEEPER_MAX){ keeper.y = KEEPER_MAX; keeper.vy = -1; }
+    }
+    if(keeper.lunge > 0) keeper.lunge -= 1;
+    if(flash > 0) flash--;
+
+    for(const c of confetti){
+      c.x += c.vx; c.y += c.vy; c.vy += 0.35;
+      c.rot += c.vr; c.life--;
+    }
+    confetti = confetti.filter(c=>c.life>0 && c.y<H+30);
+
+    if(phase === 'flying'){
+      ball.vy += GRAVITY;
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+      ball.ang += ball.spin;
+
+      if(ball.y + BALL_R > GROUND){
+        ball.y = GROUND - BALL_R;
+        if(ball.vy > 1.4){ ball.vy *= -0.45; ball.vx *= 0.82; }
+        else { ball.vy = 0; ball.vx *= 0.93; ball.spin *= 0.9; }
+      }
+      if(ball.y - BALL_R < 0){ ball.y = BALL_R; ball.vy *= -0.4; }
+
+      if(!resultLocked && ball.x+BALL_R > GOAL_X-6 && ball.x-BALL_R < GOAL_X+14
+         && ball.y-BALL_R < GOAL_TOP+8 && ball.y+BALL_R > GOAL_TOP-10 && ball.vx>0){
+        ball.vy = Math.abs(ball.vy)*0.6 + 2;
+        ball.vx *= 0.5;
+        resolveShot('post');
+      }
+
+      if(!resultLocked && circleHitsKeeper()){
+        ball.vx = -Math.abs(ball.vx)*0.55 - 1.5;
+        ball.vy = ball.vy*0.4 - 2;
+        keeper.lunge = 12;
+        resolveShot('save');
+      }
+
+      if(!resultLocked && ball.x + BALL_R*0.4 >= GOAL_X && ball.vx > 0){
+        if(ball.y > GOAL_TOP && ball.y < GOAL_BOTTOM){
+          resolveShot('goal');
+        } else if(ball.y <= GOAL_TOP){
+          resolveShot('over');
+        }
+      }
+
+      const settled = Math.abs(ball.vx)<0.4 && Math.abs(ball.vy)<0.6 && ball.y+BALL_R>=GROUND-1;
+      const offscreen = ball.x < -60 || ball.x > W+80 || ball.y > H+80;
+      if(!resultLocked && (settled || offscreen)){
+        resolveShot('miss');
+      }
+    }
+
+    if(phase === 'result'){
+      ball.vy += GRAVITY;
+      ball.x += ball.vx; ball.y += ball.vy; ball.ang += ball.spin;
+      if(ball.y + BALL_R > GROUND){
+        ball.y = GROUND - BALL_R;
+        if(ball.vy>1.4){ ball.vy*=-0.45; ball.vx*=0.82; }
+        else { ball.vy=0; ball.vx*=0.9; ball.spin*=0.9; }
+      }
+      resultTimer--;
+      if(resultTimer <= 0) nextStep();
+    }
+  }
+
+  // ===================== DRAW =====================
+  function drawBackground(){
+    let sky = ctx.createLinearGradient(0,0,0,250);
+    sky.addColorStop(0,'#bfe3ff');
+    sky.addColorStop(1,'#7fb8e8');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,W,250);
+
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    for(let i=0;i<<6;i++) ctx.fillRect(i*180+20,0,70,16);
+
+    ctx.fillStyle = '#3a4262';
+    ctx.fillRect(0,120,W,130);
+    ctx.fillStyle = '#2e3552';
+    for(let r=0;r<<3;r++) ctx.fillRect(0,120+r*30,W,4);
+
+    for(const c of crowd){
+      const by = c.y + Math.sin(frame*0.05 + c.bob)*2;
+      ctx.fillStyle = c.c;
+      ctx.beginPath();
+      ctx.arc(c.x, by, 7, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#0e1730';
+    ctx.fillRect(0,234,W,22);
+    ctx.fillStyle = '#ffd84d';
+    ctx.font = "bold 13px Fredoka, sans-serif";
+    ctx.textAlign = 'center';
+    for(let i=0;i<<4;i++){
+      ctx.fillText('★ FUTSAL LEAGUE ★', 130+i*250, 250);
+    }
+  }
+
+  function drawCourt(){
+    let fl = ctx.createLinearGradient(0,256,0,H);
+    fl.addColorStop(0,'#34c46b');
+    fl.addColorStop(1,'#1f9c50');
+    ctx.fillStyle = fl;
+    ctx.fillRect(0,256,W,H-256);
+
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    for(let i=0;i<<7;i++) if(i%2===0) ctx.fillRect(i*150,256,150,H-256);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.85)';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(34,276,W-68,H-300);
+
+    ctx.beginPath();
+    ctx.arc(GOAL_X, (GOAL_TOP+GOAL_BOTTOM)/2, 150, Math.PI*0.62, Math.PI*1.38);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(ANCHOR.x+360, GROUND-4, 5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawGoal(){
+    const x = GOAL_X, top = GOAL_TOP, bot = GOAL_BOTTOM;
+    const depth = 70;
+    ctx.fillStyle = 'rgba(255,255,255,.10)';
+    ctx.fillRect(x, top, depth, bot-top);
+    ctx.strokeStyle = 'rgba(255,255,255,.5)';
+    ctx.lineWidth = 1.4;
+    for(let gx=x; gx<=x+depth; gx+=11){
+      ctx.beginPath(); ctx.moveTo(gx,top); ctx.lineTo(gx,bot); ctx.stroke();
+    }
+    for(let gy=top; gy<=bot; gy+=11){
+      ctx.beginPath(); ctx.moveTo(x,gy); ctx.lineTo(x+depth,gy); ctx.stroke();
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#c4ccda';
+    ctx.lineWidth = 2;
+    ctx.fillRect(x-6, top-12, depth+14, 12);
+    ctx.strokeRect(x-6, top-12, depth+14, 12);
+    ctx.fillRect(x-6, top-12, 12, bot-top+12);
+    ctx.strokeRect(x-6, top-12, 12, bot-top+12);
+    ctx.fillRect(x+depth+2, top-12, 10, bot-top+12);
+  }
+
+  function drawKeeper(){
+    const x = KEEPER_X, y = keeper.y, w = KEEPER_W, h = KEEPER_H;
+    const cx = x + w/2;
+    const armSpread = keeper.lunge>0 ? 22 : 12;
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(cx, GROUND-2, 34, 9, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#16223a';
+    ctx.fillRect(cx-13, y+h-30, 10, 30);
+    ctx.fillRect(cx+3, y+h-30, 10, 30);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx-16, y+h-44, 32, 18);
+
+    ctx.fillStyle = '#ef5a16';
+    roundRect(cx-19, y+18, 38, h-58, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx-4, y+18, 8, h-58);
+
+    ctx.strokeStyle = '#ef5a16';
+    ctx.lineWidth = 11;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx-14, y+30);
+    ctx.lineTo(cx-22-armSpread, y+30 - (keeper.lunge>0?8:0));
+    ctx.moveTo(cx+14, y+30);
+    ctx.lineTo(cx+22+armSpread, y+30 - (keeper.lunge>0?8:0));
+    ctx.stroke();
+    ctx.fillStyle = '#ffd84d';
+    ctx.beginPath();
+    ctx.arc(cx-22-armSpread, y+30-(keeper.lunge>0?8:0), 8, 0, Math.PI*2);
+    ctx.arc(cx+22+armSpread, y+30-(keeper.lunge>0?8:0), 8, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#f4c89a';
+    ctx.beginPath();
+    ctx.arc(cx, y+8, 13, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#2a1c10';
+    ctx.beginPath();
+    ctx.arc(cx, y+4, 13, Math.PI*1.04, Math.PI*1.96);
+    ctx.fill();
+  }
+
+  function drawPersibPlayer(){
+    const x = 92, baseY = GROUND;
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(x, baseY-2, 30, 8, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#16223a';
+    ctx.fillRect(x-12, baseY-34, 9, 34);
+    ctx.fillRect(x+3, baseY-34, 9, 34);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x-15, baseY-46, 30, 16);
+    ctx.fillStyle = '#1e63d8';
+    roundRect(x-17, baseY-86, 34, 44, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x-3, baseY-86, 6, 44);
+    ctx.strokeStyle = '#1e63d8';
+    ctx.lineWidth = 10; ctx.lineCap='round';
+    const wave = Math.sin(frame*0.12)*6;
+    ctx.beginPath();
+    ctx.moveTo(x+12, baseY-78);
+    ctx.lineTo(x+30, baseY-104+wave);
+    ctx.moveTo(x-12, baseY-78);
+    ctx.lineTo(x-26, baseY-70);
+    ctx.stroke();
+    ctx.fillStyle = '#f4c89a';
+    ctx.beginPath();
+    ctx.arc(x+30, baseY-104+wave, 6, 0, Math.PI*2);
+    ctx.arc(x-26, baseY-70, 6, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#f4c89a';
+    ctx.beginPath();
+    ctx.arc(x, baseY-98, 13, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#1a120a';
+    ctx.beginPath();
+    ctx.arc(x, baseY-102, 13, Math.PI*1.05, Math.PI*1.95);
+    ctx.fill();
+  }
+
+  function drawSlingshot(){
+    ctx.strokeStyle = '#8a5a2b';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ANCHOR.x, GROUND);
+    ctx.lineTo(ANCHOR.x, ANCHOR.y+8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ANCHOR.x, ANCHOR.y+10);
+    ctx.lineTo(ANCHOR.x-20, ANCHOR.y-22);
+    ctx.moveTo(ANCHOR.x, ANCHOR.y+10);
+    ctx.lineTo(ANCHOR.x+20, ANCHOR.y-22);
+    ctx.stroke();
+    if(phase==='aiming'){
+      ctx.strokeStyle = '#c4763c';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(ANCHOR.x-20, ANCHOR.y-22);
+      ctx.lineTo(ball.x, ball.y);
+      ctx.lineTo(ANCHOR.x+20, ANCHOR.y-22);
+      ctx.stroke();
+    }
+  }
+
+  function drawBall(){
+    const sh = Math.max(0.12, 0.4 - (GROUND-ball.y)/900);
+    ctx.fillStyle = `rgba(0,0,0,${sh})`;
+    ctx.beginPath();
+    ctx.ellipse(ball.x, GROUND+2, BALL_R*1.1, BALL_R*0.42, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    ctx.rotate(ball.ang);
+    let grd = ctx.createRadialGradient(-5,-6,3,0,0,BALL_R);
+    grd.addColorStop(0,'#ffffff');
+    grd.addColorStop(1,'#d6dde6');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(0,0,BALL_R,0,Math.PI*2);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0,0,BALL_R,0,Math.PI*2);
+    ctx.clip();
+    ctx.fillStyle = '#1a2233';
+    pentagon(0,0,BALL_R*0.46,0);
+    for(let i=0;i<<5;i++){
+      const a = i*(Math.PI*2/5) + Math.PI/5;
+      pentagon(Math.cos(a)*BALL_R*0.95, Math.sin(a)*BALL_R*0.95, BALL_R*0.4, a);
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#9aa4b2';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0,0,BALL_R,0,Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function pentagon(cx,cy,r,rot){
+    ctx.beginPath();
+    for(let i=0;i<<5;i++){
+      const a = rot + i*(Math.PI*2/5) - Math.PI/2;
+      const px = cx+Math.cos(a)*r, py = cy+Math.sin(a)*r;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawAim(){
+    if(phase!=='aiming' || !dragging) return;
+    const dx = ANCHOR.x - pointer.x, dy = ANCHOR.y - pointer.y;
+    let vx = dx*POWER, vy = dy*POWER;
+    const sp = Math.hypot(vx,vy);
+    if(sp>MAX_SPEED){ vx=vx/sp*MAX_SPEED; vy=vy/sp*MAX_SPEED; }
+    let sx=ball.x, sy=ball.y, svx=vx, svy=vy;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    for(let i=0;i<<26;i++){
+      svy += GRAVITY;
+      sx += svx; sy += svy;
+      if(sy+BALL_R>GROUND) break;
+      if(i%2===0){
+        const rr = 5 - i*0.12;
+        ctx.beginPath();
+        ctx.arc(sx,sy,Math.max(1.6,rr),0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+    const pw = Math.min(1, sp/MAX_SPEED);
+    ctx.fillStyle = 'rgba(0,0,0,.4)';
+    roundRect(ANCHOR.x-55, GROUND+18, 110, 14, 7); ctx.fill();
+    ctx.fillStyle = pw>0.8 ? '#ff5a5a' : pw>0.5 ? '#ffd84d' : '#5bff8f';
+    roundRect(ANCHOR.x-52, GROUND+21, 104*pw, 8, 4); ctx.fill();
+  }
+
+  function drawConfetti(){
+    for(const c of confetti){
+      ctx.save();
+      ctx.translate(c.x,c.y);
+      ctx.rotate(c.rot);
+      ctx.fillStyle = c.c;
+      ctx.fillRect(-c.r/2,-c.r/2,c.r,c.r*1.6);
+      ctx.restore();
+    }
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function render(){
+    drawBackground();
+    drawCourt();
+    drawGoal();
+    drawKeeper();
+    drawPersibPlayer();
+    drawSlingshot();
+    drawAim();
+    drawBall();
+    drawConfetti();
+    if(flash>0){
+      ctx.fillStyle = `rgba(255,255,255,${flash/40})`;
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  // ===================== LOOP =====================
+  function loop(){
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // ---- NEW button handlers ----
+  infoBtn.addEventListener('click', () => {
+    infoScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+  });
+  letterBtn.addEventListener('click', () => {
+    endScreen.classList.add('hidden');
+    letterScreen.classList.remove('hidden');
+  });
+  openLetterBtn.addEventListener('click', () => {
+    letterScreen.classList.add('hidden');
+    letterOpenScreen.classList.remove('hidden');
+  });
+  closeLetterBtn.addEventListener('click', () => {
+    letterOpenScreen.classList.add('hidden');
+    infoScreen.classList.remove('hidden');
+  });
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+
+  loop();
+})();
+</script>
+</body>
+</html>
